@@ -5,7 +5,6 @@ import {
 } from "material-react-table";
 import Home from "../Home/Home";
 import { Link, useNavigate } from "react-router-dom";
-import { useGlobalContext } from "../LoginPage/GlobalContext";
 
 const api_url = process.env.REACT_APP_API_URL;
 
@@ -14,9 +13,8 @@ const CareerData = () => {
 
   const navigate = useNavigate()
 
-  const { annualComplaintRowId, setAnnualComplaintRowId } = useGlobalContext();
 
-  const [annualCompaintData, setAnnualComplaintData] = useState([]);
+  const [career, setcareer] = useState([]);
 
   const [view, setView] = useState(false);
   const [update, setUpdate] = useState(false);
@@ -24,12 +22,7 @@ const CareerData = () => {
 
   const [profileData, setProfileData] = useState([]);
 
-  const onEditClick = (_id) => {
-    console.log("Edit click");
-    setAnnualComplaintRowId(_id);
-    // console.log("Edit click",annualComplaintRowId);
-    navigate("/editAnnualComplaintRow");
-  };
+
 
   useEffect(() => {
     fetch(`${api_url}/getuser`)
@@ -75,23 +68,23 @@ const CareerData = () => {
     return date.toLocaleString();
   };
 
-  
+
   useEffect(() => {
     fetch(`http://localhost:4000/showCareer`)
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error("Network response was not ok");
-      }
-      return response.json();
-    })
-    .then((data) => {
-      setAnnualComplaintData(data);
-      console.log("Data received from the server:", data);
-    })
-    .catch((error) => console.error("Error fetching data:", error));
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Network response was not ok");
+        }
+        return response.json();
+      })
+      .then((data) => {
+        console.log("Data received from the server:", data);
+        setcareer(data);
+      })
+      .catch((error) => console.error("Error fetching data:", error));
   }, [update, profileData]);
 
- 
+
 
   //should be memoized or stable
   const columns = useMemo(
@@ -102,7 +95,7 @@ const CareerData = () => {
         size: 10,
 
       },
-    
+
       {
         accessorKey: "email", //normal accessorKey
         header: "Email",
@@ -135,27 +128,53 @@ const CareerData = () => {
         size: 20,
         accessorFn: (row) => getDateFormat(row.createdAt),
       },
-    //   {
-    //     accessorKey: "Action",
-    //     header: "Action",
-    //     size: 10,
-    //     // You can create a custom function to render an edit button
-    //     accessorFn: (rowData) => (
-    //       <button
-    //         className="edit-button"
-    //         onClick={() => update ? onEditClick(rowData._id) : alert("You dont have acces to this, Contact Admin!!")}
-    //       >
-    //         Edit
-    //       </button>
-    //     ),
-    //   },
+      {
+        accessorKey: "Action",
+        header: "Action",
+        size: 10,
+        accessorFn: (rowData) => (
+          <button
+            className="edit-button"
+            onClick={() => handleDownload(rowData._id, rowData.uploadResume)}
+          >
+            Download
+          </button>
+        ),
+      },
+
+
     ],
-    [annualCompaintData]
+    [career]
   );
+ 
+  const handleDownload = async (id, pdfName) => {
+   
+    try {
+        const response = await fetch(`http://localhost:4000/showCareer/${id}/download`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status:${response.status}`);
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+
+        link.href = url;
+        link.setAttribute('download', pdfName);
+        document.body.appendChild(link);
+        link.click();
+        await new Promise(resolve => setTimeout(resolve, 100));
+        document.body.removeChild(link);
+    } catch (error) {
+        console.error("Error downloading PDF:", error);
+    }
+};
+
+
 
   const table = useMaterialReactTable({
     columns,
-    data: annualCompaintData, //data must be memoized or stable (useState, useMemo, defined outside of this component, etc.)
+    data: career, //data must be memoized or stable (useState, useMemo, defined outside of this component, etc.)
     // initialState: { e: false },
     enableColumnFilters: false,
     enableDensityToggle: false,
